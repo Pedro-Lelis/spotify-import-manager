@@ -10,11 +10,19 @@ CONFIG_FILE = Path(__file__).parent.parent / "config.json"
 
 DEFAULT_CONFIG = {
     "db": {
-        "host": "localhost",
+        "mode": "embedded",          # "embedded" (padrao, turnkey) | "external"
+        "host": "localhost",         # usados no modo external
         "port": "5432",
         "dbname": "spotify",
         "user": "claude_etl",
         "password": "",
+        "embedded": {                # usados no modo embedded
+            "port": "5433",
+            "dbname": "spotify",
+            "app_user": "spotify_app",
+            "app_password": "",          # DEFINIDA pelo usuario (aba Configuracoes)
+            "superuser_password": "",    # interna, gerada no 1o run
+        },
     },
     "spotify": {
         "client_id": "",
