@@ -501,7 +501,8 @@ class SettingsTab(ttk.Frame):
                     "Banco embutido preparado e no ar.\nJa pode conectar o pgAdmin."))
                 self.after(0, self.app.refresh_status)
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("Erro ao preparar banco", str(e)))
+                msg = str(e)
+                self.after(0, lambda: messagebox.showerror("Erro ao preparar banco", msg))
 
         threading.Thread(target=work, daemon=True).start()
 
@@ -529,7 +530,8 @@ class SettingsTab(ttk.Frame):
                     "Conexao OK", f"Conectado com sucesso!\n\n{ver}"))
                 self.after(0, self.app.refresh_status)
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("Erro de conexao", str(e)))
+                msg = str(e)
+                self.after(0, lambda: messagebox.showerror("Erro de conexao", msg))
 
         threading.Thread(target=work, daemon=True).start()
 
@@ -1060,8 +1062,8 @@ class App(tk.Tk):
                 self.ensure_db_ready(log=print)
                 self.after(0, self.refresh_status)
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror(
-                    "Banco", f"Falha ao preparar a conexao:\n{e}"))
+                msg = f"Falha ao preparar a conexao:\n{e}"
+                self.after(0, lambda: messagebox.showerror("Banco", msg))
 
         threading.Thread(target=work, daemon=True).start()
 
