@@ -1,24 +1,24 @@
 @echo off
 cd /d "%~dp0"
 
-:: Detecta um Python que tenha as dependencias instaladas
 call "%~dp0find_python.bat" run
-
-if not defined PYCMD (
-    echo.
-    echo [ERRO] Nenhum Python com as dependencias foi encontrado.
-    echo Rode "instalar.bat" primeiro (precisa de Python 3.10 a 3.13).
-    echo.
-    pause
-    exit /b 1
-)
+if not defined PYCMD goto :nopy
 
 echo Iniciando com: %PYCMD%
+echo.
 %PYCMD% app.py
 
-if %errorlevel% neq 0 (
-    echo.
-    echo [ERRO] Falha ao iniciar o aplicativo.
-    echo Certifique-se de ter executado "instalar.bat" primeiro.
-    pause
-)
+echo.
+echo ------------------------------------------------------------
+echo O aplicativo foi encerrado.
+echo Se houve algum erro acima, me mostre a mensagem.
+pause
+exit /b 0
+
+:nopy
+echo.
+echo [ERRO] Nenhum Python com as dependencias foi encontrado.
+echo Rode o instalar.bat primeiro. Precisa de Python 3.10 a 3.13.
+echo.
+pause
+exit /b 1
