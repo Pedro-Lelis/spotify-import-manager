@@ -15,7 +15,7 @@ O Spotify oferece um arquivo de exportação com o histórico completo de escuta
 | Camada | Tecnologia |
 |---|---|
 | Banco de dados | PostgreSQL 14+ |
-| ETL / backend | Python 3.10–3.12 |
+| ETL / backend | Python 3.10–3.13 |
 | Interface gráfica | tkinter (built-in) |
 | Análise de áudio | librosa + pyloudnorm |
 | Enriquecimento de catálogo | Spotify Web API |
@@ -73,6 +73,7 @@ Dados do Spotify (JSON)
 | 4 | **Recuperar preview_url** | Scraping do Embed Player para obter URLs de preview MP3 (10 workers paralelos) | Spotify Embed |
 | 5 | **Features de áudio** | Calcula tempo, tom, loudness e energy via Librosa | Preview MP3 |
 | 6 | **Features extras** | Calcula danceability, valence, speechiness, acousticness, instrumentalness, liveness, time_signature (8 workers paralelos) | Preview MP3 |
+| 7 | **Biografias de artistas** | Busca bios em cascata | TheAudioDB → Wikipedia → Last.fm → Discogs |
 
 Todas as etapas são **idempotentes** — podem ser interrompidas e reexecutadas sem duplicar dados. O pipeline tem botão de parada graciosa que salva o progresso antes de encerrar.
 
@@ -156,8 +157,8 @@ As ~60–75 tracks sem cobertura total são músicas removidas de todas as plata
 ## Como Rodar
 
 ### Primeira vez
-1. Instale Python 3.10–3.12 em [python.org](https://python.org) (marcar "Add to PATH")
-2. Instale PostgreSQL em [postgresql.org](https://postgresql.org)
+1. Instale Python 3.10 a 3.13 em [python.org](https://python.org) (marque **"Add to PATH"**)
+2. Instale PostgreSQL em [postgresql.org](https://postgresql.org) (anote a senha do usuário `postgres`)
 3. Crie o banco de dados vazio:
    ```
    psql -U postgres -c "CREATE DATABASE spotify;"
@@ -166,9 +167,11 @@ As ~60–75 tracks sem cobertura total são músicas removidas de todas as plata
    ```
    psql -U postgres -d spotify -f setup_banco.sql
    ```
-5. Execute `instalar.bat`
+5. Execute `instalar.bat` (instala as dependências Python; encontra a versão certa automaticamente)
 6. Execute `abrir_app.bat`
-7. Configure a conexão na aba **Configurações**
+7. Na aba **Configurações**, escolha **"Conectar a um PostgreSQL existente"** e preencha host, porta, banco (`spotify`), usuário e senha → clique em **"Testar conexão"**
+
+> A opção **"Banco embutido"** (que dispensa instalar o PostgreSQL) está em desenvolvimento. Por enquanto, use **"Conectar a um PostgreSQL existente"**.
 
 ### Execuções seguintes
 Apenas `abrir_app.bat` → selecionar etapas → **Executar pipeline**
@@ -193,17 +196,22 @@ Spotify Import Manager\
   ├── abrir_app.bat                 ← Atalho para iniciar
   ├── instalar.bat                  ← Instala dependências Python
   ├── desinstalar.bat               ← Remove dependências Python
+  ├── find_python.bat               ← Detecta a versão do Python adequada
   ├── requirements.txt              ← Lista de dependências
   ├── setup_banco.sql               ← Schema completo do banco
   ├── config.json.example           ← Template de configuração
   └── etl\
       ├── __init__.py               ← Torna etl/ um pacote Python
       ├── config.py                 ← Carrega/salva config.json
+      ├── db_bootstrap.py           ← Decide embutido/externo, prepara a conexão
+      ├── embedded_pg.py            ← Gerencia o PostgreSQL embutido (em dev)
+      ├── ssh_tunnel.py             ← Túnel SSH para bancos remotos
       ├── pipeline.py               ← Orquestrador das etapas
       ├── import_listening_history.py
       ├── import_basic_export.py
       ├── enrich_catalog.py         ← Spotify Web API
       ├── enrich_preview_urls.py    ← Embed scraping (paralelo)
       ├── compute_audio_features.py ← Librosa básico
-      └── compute_extra_features.py ← Librosa extras (paralelo)
+      ├── compute_extra_features.py ← Librosa extras (paralelo)
+      └── enrich_artist_bio.py      ← Biografias de artistas
 ```
