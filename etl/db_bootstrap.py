@@ -120,6 +120,13 @@ def prepare(config: dict, log=print, save_fn=None, project_root=PROJECT_ROOT) ->
     app_pwd   = emb.get("app_password", "")
     super_pwd = emb.get("superuser_password", "")
 
+    if not (bin_dir / "initdb.exe").exists():
+        raise RuntimeError(
+            f"Binarios do PostgreSQL embutido nao encontrados em {bin_dir}.\n"
+            "Rode 'baixar_banco_embutido.bat' primeiro (baixa ~320MB), ou use o "
+            "modo 'Conectar a um PostgreSQL existente'."
+        )
+
     if not app_pwd:
         raise RuntimeError(
             "Modo embutido: defina a senha do banco (Configuracoes) antes de "

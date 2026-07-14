@@ -24,11 +24,15 @@ echo ============================================================
 echo   Instalacao concluida com sucesso!
 echo ============================================================
 echo.
-echo Proximos passos:
-echo   1. Instale o PostgreSQL em https://www.postgresql.org/download/
-echo   2. Crie o banco de dados com o arquivo setup_banco.sql
-echo   3. Execute abrir_app.bat para iniciar o aplicativo
-echo   4. Na aba Configuracoes, escolha "Conectar a um PostgreSQL existente"
+echo Proximos passos - escolha um caminho de banco:
+echo.
+echo   Opcao A (recomendada, sem instalar PostgreSQL):
+echo     1. Rode baixar_banco_embutido.bat
+echo     2. Rode abrir_app.bat e use "Banco embutido"
+echo.
+echo   Opcao B (usar um PostgreSQL que voce ja tem):
+echo     1. Instale o PostgreSQL e crie o banco com setup_banco.sql
+echo     2. Rode abrir_app.bat e use "Conectar a um PostgreSQL existente"
 echo.
 pause
 exit /b 0

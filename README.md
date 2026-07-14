@@ -157,21 +157,25 @@ As ~60–75 tracks sem cobertura total são músicas removidas de todas as plata
 ## Como Rodar
 
 ### Primeira vez
-1. Instale Python 3.10 a 3.13 em [python.org](https://python.org) (marque **"Add to PATH"**)
-2. Instale PostgreSQL em [postgresql.org](https://postgresql.org) (anote a senha do usuário `postgres`)
-3. Crie o banco de dados vazio:
+
+Comece instalando **Python 3.10 a 3.13** em [python.org](https://python.org) (marque **"Add to PATH"**) e rodando o **`instalar.bat`** — ele instala as dependências e encontra a versão certa do Python automaticamente.
+
+Depois escolha **um** dos caminhos de banco:
+
+#### Opção A — Banco embutido (recomendado, sem instalar PostgreSQL)
+1. Rode **`baixar_banco_embutido.bat`** (baixa ~320 MB do PostgreSQL portátil, uma vez só)
+2. Rode `abrir_app.bat`
+3. Na aba **Configurações**, deixe em **"Banco embutido"**, defina uma senha e clique em **"Preparar banco"**
+
+#### Opção B — Conectar a um PostgreSQL que você já tem
+1. Instale o PostgreSQL em [postgresql.org](https://postgresql.org)
+2. Crie o banco e as tabelas:
    ```
    psql -U postgres -c "CREATE DATABASE spotify;"
-   ```
-4. Crie as tabelas dentro dele:
-   ```
    psql -U postgres -d spotify -f setup_banco.sql
    ```
-5. Execute `instalar.bat` (instala as dependências Python; encontra a versão certa automaticamente)
-6. Execute `abrir_app.bat`
-7. Na aba **Configurações**, escolha **"Conectar a um PostgreSQL existente"** e preencha host, porta, banco (`spotify`), usuário e senha → clique em **"Testar conexão"**
-
-> A opção **"Banco embutido"** (que dispensa instalar o PostgreSQL) está em desenvolvimento. Por enquanto, use **"Conectar a um PostgreSQL existente"**.
+3. Rode `abrir_app.bat`
+4. Na aba **Configurações**, escolha **"Conectar a um PostgreSQL existente"**, preencha os dados e clique em **"Testar conexão"**
 
 ### Execuções seguintes
 Apenas `abrir_app.bat` → selecionar etapas → **Executar pipeline**
@@ -195,6 +199,7 @@ Spotify Import Manager\
   ├── app.py                        ← Interface gráfica (tkinter)
   ├── abrir_app.bat                 ← Atalho para iniciar
   ├── instalar.bat                  ← Instala dependências Python
+  ├── baixar_banco_embutido.bat     ← Baixa o PostgreSQL portátil (modo embutido)
   ├── desinstalar.bat               ← Remove dependências Python
   ├── find_python.bat               ← Detecta a versão do Python adequada
   ├── requirements.txt              ← Lista de dependências
