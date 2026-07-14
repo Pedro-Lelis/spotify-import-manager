@@ -989,6 +989,7 @@ class App(tk.Tk):
 
         # Estado do banco embutido (Fase 1)
         self.db_handle = None
+        self._db_sig = None            # assinatura da config usada na conexao atual
         self._prepare_lock = threading.Lock()
 
         # Tema
@@ -1019,8 +1020,11 @@ class App(tk.Tk):
     def effective_db_dict(self) -> dict:
         """Parametros de conexao em uso agora (sem preparar nada)."""
         db = self.config["db"]
+        # o handle so vale se foi construido com a config atual
+        handle_ok = (self.db_handle is not None
+                     and self._db_sig == json.dumps(db, sort_keys=True))
         if db.get("mode") == "embedded":
-            if self.db_handle is not None:
+            if handle_ok:
                 return self.db_handle.as_db_dict()
             emb = db.get("embedded", {})
             return {
@@ -1030,21 +1034,32 @@ class App(tk.Tk):
                 "user":     emb.get("app_user", "spotify_app"),
                 "password": emb.get("app_password", ""),
             }
-        # external: se ha tunel SSH aberto, aponta para a porta local dele
-        if (db.get("ssh", {}).get("enabled") and self.db_handle is not None
-                and self.db_handle.is_active()):
+        # external: se ha tunel SSH aberto e compativel, aponta para a porta local
+        if db.get("ssh", {}).get("enabled") and handle_ok and self.db_handle.is_active():
             return self.db_handle.as_db_dict()
         return {k: db.get(k, "") for k in ("host", "port", "dbname", "user", "password")}
 
     def ensure_db_ready(self, log=print) -> dict:
-        """Prepara a conexao (sobe embutido / abre tunel se preciso) e devolve o db dict efetivo."""
+        """Prepara a conexao (sobe embutido / abre tunel se preciso) e devolve o db dict efetivo.
+        Reconstroi se a config do banco mudou desde a ultima preparacao."""
         from etl import db_bootstrap
         with self._prepare_lock:
-            if self.db_handle is not None and self.db_handle.is_active():
+            sig = json.dumps(self.config.get("db", {}), sort_keys=True)
+            if (self.db_handle is not None and self.db_handle.is_active()
+                    and self._db_sig == sig):
                 return self.db_handle.as_db_dict()
+            # config mudou (ou nada ativo): derruba a conexao antiga e reconstroi
+            if self.db_handle is not None:
+                try:
+                    self.db_handle.stop()
+                except Exception:
+                    pass
+                self.db_handle = None
             handle = db_bootstrap.prepare(self.config, log=log, save_fn=save_config,
                                           project_root=PROJECT_ROOT)
             self.db_handle = handle
+            # recomputa a assinatura APOS prepare (embutido pode ter gerado a senha do superusuario)
+            self._db_sig = json.dumps(self.config.get("db", {}), sort_keys=True)
             return handle.as_db_dict()
 
     def _startup_prepare(self):
