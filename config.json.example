@@ -1,0 +1,23 @@
+{
+    "db": {
+        "host": "localhost",
+        "port": "5432",
+        "dbname": "spotify",
+        "user": "seu_usuario",
+        "password": "sua_senha"
+    },
+    "spotify": {
+        "client_id": "",
+        "client_secret": ""
+    },
+    "paths": {
+        "extended_history_dir": "",
+        "basic_export_dir": ""
+    },
+    "lastfm": {
+        "api_key": ""
+    },
+    "discogs": {
+        "user_token": ""
+    }
+}
