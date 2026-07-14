@@ -23,6 +23,13 @@ DEFAULT_CONFIG = {
             "app_password": "",          # DEFINIDA pelo usuario (aba Configuracoes)
             "superuser_password": "",    # interna, gerada no 1o run
         },
+        "ssh": {                     # tunel SSH (opcional, modo external)
+            "enabled": False,
+            "host": "",
+            "port": "22",
+            "user": "",
+            "key_path": "",
+        },
     },
     "spotify": {
         "client_id": "",

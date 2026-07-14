@@ -4,3 +4,5 @@ librosa>=0.10
 pyloudnorm>=0.1
 numpy>=1.24
 scipy>=1.10
+sshtunnel>=0.4
+paramiko>=3,<4   # sshtunnel 0.4 nao suporta paramiko 4+ (removeu DSSKey)

@@ -26,10 +26,11 @@ DEFAULT_EMBEDDED_PORT = 5433
 
 
 class DatabaseHandle:
-    def __init__(self, params: dict, embedded: EmbeddedPostgres = None):
+    def __init__(self, params: dict, embedded: EmbeddedPostgres = None, tunnel=None):
         self.params = params            # host, port, dbname, user, password
         self.mode = "embedded" if embedded is not None else "external"
         self._embedded = embedded
+        self._tunnel = tunnel
 
     def as_db_dict(self) -> dict:
         """Formato compativel com config['db'] / cfg.build_dsn."""
@@ -41,10 +42,22 @@ class DatabaseHandle:
             "password": self.params["password"],
         }
 
+    def is_active(self) -> bool:
+        """Se ha recurso vivo a reutilizar (servidor embutido ou tunel).
+        External direto retorna False para ser sempre reconstruido (barato) e
+        refletir mudancas de config."""
+        if self._embedded is not None:
+            return self._embedded.is_running()
+        if self._tunnel is not None:
+            return self._tunnel.is_active
+        return False
+
     def stop(self):
-        """Encerra o servidor embutido (no-op no modo external)."""
+        """Encerra o servidor embutido e/ou fecha o tunel SSH (no-op no external direto)."""
         if self._embedded is not None:
             self._embedded.stop()
+        if self._tunnel is not None:
+            self._tunnel.stop()
 
 
 def prepare(config: dict, log=print, save_fn=None, project_root=PROJECT_ROOT) -> DatabaseHandle:
@@ -61,8 +74,32 @@ def prepare(config: dict, log=print, save_fn=None, project_root=PROJECT_ROOT) ->
     db = config.get("db", {})
     mode = db.get("mode", "external")
 
-    # ---------- modo external (comportamento historico) ----------
+    # ---------- modo external ----------
     if mode != "embedded":
+        ssh = db.get("ssh", {})
+        if ssh.get("enabled"):
+            # Postgres so acessivel via tunel SSH: host/port do db sao o endereco
+            # do Postgres como visto pela VM (tipicamente localhost:PGPORT).
+            from etl.ssh_tunnel import SSHTunnel
+            tunnel = SSHTunnel(
+                ssh_host=ssh.get("host", ""),
+                ssh_port=ssh.get("port", "22"),
+                ssh_user=ssh.get("user", ""),
+                key_path=ssh.get("key_path", ""),
+                remote_host=db.get("host", "localhost"),
+                remote_port=db.get("port", "5432"),
+                log=log,
+            )
+            local_port = tunnel.start()
+            params = {
+                "host":     "127.0.0.1",
+                "port":     local_port,
+                "dbname":   db.get("dbname", "spotify"),
+                "user":     db.get("user", ""),
+                "password": db.get("password", ""),
+            }
+            return DatabaseHandle(params, tunnel=tunnel)
+
         params = {
             "host":     db.get("host", "localhost"),
             "port":     db.get("port", "5432"),

@@ -65,6 +65,13 @@ DEFAULT_CONFIG = {
             "app_password":       "",    # DEFINIDA pelo usuario (aba Configuracoes)
             "superuser_password": "",    # interna, gerada no 1o run
         },
+        "ssh": {                     # tunel SSH (opcional, modo external)
+            "enabled":  False,
+            "host":     "",          # IP publico do servidor SSH
+            "port":     "22",
+            "user":     "",
+            "key_path": "",          # caminho da chave privada
+        },
     },
     "spotify": {
         "client_id":     "",
@@ -336,8 +343,35 @@ class SettingsTab(ttk.Frame):
         ]
         for i, (path, label, is_pw) in enumerate(ext_fields):
             self._labeled_entry(self._db_external, i, label, path, is_pw=is_pw)
+
+        # Tunel SSH (opcional)
+        self._ssh_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(self._db_external, text="Usar tunel SSH",
+                        variable=self._ssh_var, command=self._on_ssh_toggle).grid(
+            row=len(ext_fields), column=1, sticky="w", padx=24, pady=(8, 2))
+
+        self._ssh_frame = ttk.Frame(self._db_external)
+        self._ssh_frame.grid(row=len(ext_fields) + 1, column=0, columnspan=2, sticky="ew")
+        self._labeled_entry(self._ssh_frame, 0, "SSH host", "db.ssh.host")
+        self._labeled_entry(self._ssh_frame, 1, "SSH porta", "db.ssh.port", width=12)
+        self._labeled_entry(self._ssh_frame, 2, "SSH usuario", "db.ssh.user")
+        ttk.Label(self._ssh_frame, text="Chave privada").grid(
+            row=3, column=0, sticky="e", padx=24, pady=6)
+        key_fr = ttk.Frame(self._ssh_frame)
+        key_fr.grid(row=3, column=1, sticky="w", padx=24, pady=6)
+        key_var = tk.StringVar()
+        self._vars["db.ssh.key_path"] = key_var
+        ttk.Entry(key_fr, textvariable=key_var, width=40).pack(side="left")
+        ttk.Button(key_fr, text="Buscar...",
+                   command=lambda: self._browse_file(key_var)).pack(side="left", padx=(6, 0))
+        ttk.Label(self._ssh_frame,
+                  text="Host/Porta acima = o Postgres como visto pela VM (ex: localhost / 2001).",
+                  style="Muted.TLabel").grid(row=4, column=0, columnspan=2, sticky="w",
+                                             padx=24, pady=(0, 6))
+        self._ssh_frame.columnconfigure(1, weight=1)
+
         ext_btns = ttk.Frame(self._db_external)
-        ext_btns.grid(row=len(ext_fields), column=0, columnspan=2, sticky="w", padx=24, pady=8)
+        ext_btns.grid(row=len(ext_fields) + 2, column=0, columnspan=2, sticky="w", padx=24, pady=8)
         ttk.Button(ext_btns, text="Testar conexao", command=self._test_conn).pack(side="left")
         self._db_external.columnconfigure(1, weight=1)
 
@@ -429,16 +463,25 @@ class SettingsTab(ttk.Frame):
             self._db_external.grid_remove()
             self._db_embedded.grid()
 
+    def _on_ssh_toggle(self):
+        if self._ssh_var.get():
+            self._ssh_frame.grid()
+        else:
+            self._ssh_frame.grid_remove()
+
     def _load_from_config(self):
         cfg = self.app.config
         self._mode_var.set(cfg.get("db", {}).get("mode", "embedded"))
+        self._ssh_var.set(bool(cfg.get("db", {}).get("ssh", {}).get("enabled")))
         for path, var in self._vars.items():
             var.set(str(self._get_nested(cfg, path)))
         self._on_mode_change()
+        self._on_ssh_toggle()
 
     def _read_to_config(self):
         cfg = self.app.config
         self._set_nested(cfg, "db.mode", self._mode_var.get())
+        self._set_nested(cfg, "db.ssh.enabled", bool(self._ssh_var.get()))
         for path, var in self._vars.items():
             self._set_nested(cfg, path, var.get())
 
@@ -469,25 +512,39 @@ class SettingsTab(ttk.Frame):
 
     def _test_conn(self):
         self._read_to_config()
+        save_config(self.app.config)
         if psycopg2 is None:
             messagebox.showerror("Erro", "psycopg2 nao instalado.\nRode: py -m pip install psycopg2-binary")
             return
-        try:
-            dsn = build_dsn(self.app.effective_db_dict())
-            conn = psycopg2.connect(dsn, connect_timeout=5)
-            cur = conn.cursor()
-            cur.execute("SELECT version()")
-            ver = cur.fetchone()[0]
-            conn.close()
-            messagebox.showinfo("Conexao OK", f"Conectado com sucesso!\n\n{ver}")
-        except Exception as e:
-            messagebox.showerror("Erro de conexao", str(e))
+
+        def work():
+            try:
+                db = self.app.ensure_db_ready(log=print)
+                conn = psycopg2.connect(build_dsn(db), connect_timeout=8)
+                cur = conn.cursor()
+                cur.execute("SELECT version()")
+                ver = cur.fetchone()[0]
+                conn.close()
+                self.after(0, lambda: messagebox.showinfo(
+                    "Conexao OK", f"Conectado com sucesso!\n\n{ver}"))
+                self.after(0, self.app.refresh_status)
+            except Exception as e:
+                self.after(0, lambda: messagebox.showerror("Erro de conexao", str(e)))
+
+        threading.Thread(target=work, daemon=True).start()
 
     def _browse(self, var: tk.StringVar):
         initial = var.get() if var.get() else str(Path.home())
         d = filedialog.askdirectory(title="Selecionar pasta", initialdir=initial)
         if d:
             var.set(d)
+
+    def _browse_file(self, var: tk.StringVar):
+        current = var.get()
+        initial_dir = str(Path(current).parent) if current else str(Path.home())
+        p = filedialog.askopenfilename(title="Selecionar chave privada", initialdir=initial_dir)
+        if p:
+            var.set(p)
 
 
 # ============================================================
@@ -971,15 +1028,18 @@ class App(tk.Tk):
                 "user":     emb.get("app_user", "spotify_app"),
                 "password": emb.get("app_password", ""),
             }
+        # external: se ha tunel SSH aberto, aponta para a porta local dele
+        if (db.get("ssh", {}).get("enabled") and self.db_handle is not None
+                and self.db_handle.is_active()):
+            return self.db_handle.as_db_dict()
         return {k: db.get(k, "") for k in ("host", "port", "dbname", "user", "password")}
 
     def ensure_db_ready(self, log=print) -> dict:
-        """Prepara o banco (sobe o embutido se preciso) e devolve o db dict efetivo."""
-        db = self.config["db"]
-        if db.get("mode") != "embedded":
-            return {k: db.get(k, "") for k in ("host", "port", "dbname", "user", "password")}
+        """Prepara a conexao (sobe embutido / abre tunel se preciso) e devolve o db dict efetivo."""
         from etl import db_bootstrap
         with self._prepare_lock:
+            if self.db_handle is not None and self.db_handle.is_active():
+                return self.db_handle.as_db_dict()
             handle = db_bootstrap.prepare(self.config, log=log, save_fn=save_config,
                                           project_root=PROJECT_ROOT)
             self.db_handle = handle
@@ -987,10 +1047,13 @@ class App(tk.Tk):
 
     def _startup_prepare(self):
         db = self.config["db"]
-        if db.get("mode") != "embedded":
+        needs = False
+        if db.get("mode") == "embedded":
+            needs = bool(db.get("embedded", {}).get("app_password"))
+        elif db.get("ssh", {}).get("enabled"):
+            needs = True
+        if not needs:
             return
-        if not db.get("embedded", {}).get("app_password"):
-            return  # usuario ainda vai definir a senha na aba Configuracoes
 
         def work():
             try:
@@ -998,7 +1061,7 @@ class App(tk.Tk):
                 self.after(0, self.refresh_status)
             except Exception as e:
                 self.after(0, lambda: messagebox.showerror(
-                    "Banco embutido", f"Falha ao preparar o banco:\n{e}"))
+                    "Banco", f"Falha ao preparar a conexao:\n{e}"))
 
         threading.Thread(target=work, daemon=True).start()
 
