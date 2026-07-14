@@ -41,18 +41,23 @@ DEFAULT_CONFIG = {
 }
 
 
+def _deep_merge(default: dict, override: dict) -> dict:
+    """Merge recursivo: preserva sub-chaves do default nao presentes no override."""
+    result = dict(default)
+    for k, v in override.items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = _deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
+
+
 def load() -> dict:
     """Carrega config.json, fazendo deep-merge com os defaults."""
     if CONFIG_FILE.exists():
         with open(CONFIG_FILE, encoding="utf-8") as f:
             data = json.load(f)
-        result = {}
-        for k, v in DEFAULT_CONFIG.items():
-            if k in data and isinstance(v, dict):
-                result[k] = {**v, **data[k]}
-            else:
-                result[k] = data.get(k, v)
-        return result
+        return _deep_merge(DEFAULT_CONFIG, data)
     return json.loads(json.dumps(DEFAULT_CONFIG))  # deep copy
 
 

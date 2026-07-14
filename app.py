@@ -87,17 +87,22 @@ DEFAULT_CONFIG = {
 # CONFIG HELPERS
 # ============================================================
 
+def _deep_merge(default: dict, override: dict) -> dict:
+    """Merge recursivo: preserva sub-chaves do default nao presentes no override."""
+    result = dict(default)
+    for k, v in override.items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = _deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
+
+
 def load_config() -> dict:
     if CONFIG_FILE.exists():
         with open(CONFIG_FILE, encoding="utf-8") as f:
             data = json.load(f)
-        result = {}
-        for k, v in DEFAULT_CONFIG.items():
-            if k in data and isinstance(v, dict):
-                result[k] = {**v, **data[k]}
-            else:
-                result[k] = data.get(k, v)
-        return result
+        return _deep_merge(DEFAULT_CONFIG, data)
     return json.loads(json.dumps(DEFAULT_CONFIG))
 
 
@@ -212,6 +217,17 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
         indicatorcolor=[("selected", ACCENT)],
     )
 
+    # Radiobutton
+    style.configure("TRadiobutton",
+        background=BG_DARK,
+        foreground=FG_MAIN,
+        indicatorcolor=BG_CARD,
+    )
+    style.map("TRadiobutton",
+        background=[("active", BG_DARK)],
+        indicatorcolor=[("selected", ACCENT)],
+    )
+
     # Progressbar
     style.configure("TProgressbar",
         troughcolor=BG_CARD,
@@ -280,24 +296,50 @@ class SettingsTab(ttk.Frame):
         ttk.Separator(f, orient="horizontal").grid(
             row=1, column=0, columnspan=3, sticky="ew", padx=24, pady=(0, 12))
 
-        fields_db = [
-            ("host",     "Host",     False),
-            ("port",     "Porta",    False),
-            ("dbname",   "Banco",    False),
-            ("user",     "Usuario",  False),
-            ("password", "Senha",    True),
-        ]
-        for i, (key, label, is_pw) in enumerate(fields_db):
-            ttk.Label(f, text=label).grid(row=2+i, column=0, sticky="e", **pad)
-            var = tk.StringVar()
-            entry = ttk.Entry(f, textvariable=var, width=40, show="*" if is_pw else "")
-            entry.grid(row=2+i, column=1, sticky="w", **pad)
-            self._vars[f"db.{key}"] = var
+        # Seletor de modo (embutido x externo)
+        self._mode_var = tk.StringVar(value="embedded")
+        mode_frame = ttk.Frame(f)
+        mode_frame.grid(row=2, column=0, columnspan=3, sticky="w", padx=24, pady=(0, 8))
+        ttk.Radiobutton(mode_frame, text="Banco embutido (recomendado)",
+                        variable=self._mode_var, value="embedded",
+                        command=self._on_mode_change).pack(anchor="w")
+        ttk.Radiobutton(mode_frame, text="Conectar a um PostgreSQL existente",
+                        variable=self._mode_var, value="external",
+                        command=self._on_mode_change).pack(anchor="w")
 
-        # Botoes banco
-        btn_frame = ttk.Frame(f)
-        btn_frame.grid(row=2+len(fields_db), column=0, columnspan=3, sticky="w", padx=24, pady=8)
-        ttk.Button(btn_frame, text="Testar conexao", command=self._test_conn).pack(side="left", padx=(0, 8))
+        # ---- Frame do modo EMBUTIDO ----
+        self._db_embedded = ttk.Frame(f)
+        self._db_embedded.grid(row=3, column=0, columnspan=3, sticky="ew")
+        self._labeled_entry(self._db_embedded, 0, "Senha do banco",
+                            "db.embedded.app_password", is_pw=True)
+        self._labeled_entry(self._db_embedded, 1, "Porta", "db.embedded.port", width=12)
+        ttk.Label(self._db_embedded,
+                  text="Usuario: spotify_app  ·  Host: localhost  ·  conecte o pgAdmin nesta porta.",
+                  style="Muted.TLabel").grid(row=2, column=0, columnspan=2, sticky="w",
+                                             padx=24, pady=(0, 6))
+        emb_btns = ttk.Frame(self._db_embedded)
+        emb_btns.grid(row=3, column=0, columnspan=2, sticky="w", padx=24, pady=8)
+        ttk.Button(emb_btns, text="Preparar banco", style="Accent.TButton",
+                   command=self._prepare_db).pack(side="left", padx=(0, 8))
+        ttk.Button(emb_btns, text="Testar conexao", command=self._test_conn).pack(side="left")
+        self._db_embedded.columnconfigure(1, weight=1)
+
+        # ---- Frame do modo EXTERNO ----
+        self._db_external = ttk.Frame(f)
+        self._db_external.grid(row=3, column=0, columnspan=3, sticky="ew")
+        ext_fields = [
+            ("db.host",     "Host",    False),
+            ("db.port",     "Porta",   False),
+            ("db.dbname",   "Banco",   False),
+            ("db.user",     "Usuario", False),
+            ("db.password", "Senha",   True),
+        ]
+        for i, (path, label, is_pw) in enumerate(ext_fields):
+            self._labeled_entry(self._db_external, i, label, path, is_pw=is_pw)
+        ext_btns = ttk.Frame(self._db_external)
+        ext_btns.grid(row=len(ext_fields), column=0, columnspan=2, sticky="w", padx=24, pady=8)
+        ttk.Button(ext_btns, text="Testar conexao", command=self._test_conn).pack(side="left")
+        self._db_external.columnconfigure(1, weight=1)
 
         # ---- Spotify API ----
         ttk.Label(f, text="Spotify API", style="Header.TLabel").grid(
@@ -352,17 +394,73 @@ class SettingsTab(ttk.Frame):
         # Coluna de peso
         f.columnconfigure(1, weight=1)
 
+    def _labeled_entry(self, parent, row, label, path, is_pw=False, width=40):
+        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="e", padx=24, pady=6)
+        var = tk.StringVar()
+        ttk.Entry(parent, textvariable=var, width=width,
+                  show="*" if is_pw else "").grid(row=row, column=1, sticky="w", padx=24, pady=6)
+        self._vars[path] = var
+        return var
+
+    @staticmethod
+    def _get_nested(cfg, path):
+        cur = cfg
+        for part in path.split("."):
+            if not isinstance(cur, dict):
+                return ""
+            cur = cur.get(part)
+            if cur is None:
+                return ""
+        return "" if isinstance(cur, dict) else cur
+
+    @staticmethod
+    def _set_nested(cfg, path, value):
+        parts = path.split(".")
+        cur = cfg
+        for part in parts[:-1]:
+            cur = cur.setdefault(part, {})
+        cur[parts[-1]] = value
+
+    def _on_mode_change(self):
+        if self._mode_var.get() == "external":
+            self._db_embedded.grid_remove()
+            self._db_external.grid()
+        else:
+            self._db_external.grid_remove()
+            self._db_embedded.grid()
+
     def _load_from_config(self):
         cfg = self.app.config
-        for key, var in self._vars.items():
-            section, field = key.split(".", 1)
-            var.set(str(cfg.get(section, {}).get(field, "")))
+        self._mode_var.set(cfg.get("db", {}).get("mode", "embedded"))
+        for path, var in self._vars.items():
+            var.set(str(self._get_nested(cfg, path)))
+        self._on_mode_change()
 
     def _read_to_config(self):
         cfg = self.app.config
-        for key, var in self._vars.items():
-            section, field = key.split(".", 1)
-            cfg[section][field] = var.get()
+        self._set_nested(cfg, "db.mode", self._mode_var.get())
+        for path, var in self._vars.items():
+            self._set_nested(cfg, path, var.get())
+
+    def _prepare_db(self):
+        self._read_to_config()
+        save_config(self.app.config)
+        if not self.app.config["db"].get("embedded", {}).get("app_password"):
+            messagebox.showwarning("Senha necessaria",
+                                   "Defina a senha do banco embutido antes de preparar.")
+            return
+
+        def work():
+            try:
+                self.app.ensure_db_ready(log=print)
+                self.after(0, lambda: messagebox.showinfo(
+                    "Banco pronto",
+                    "Banco embutido preparado e no ar.\nJa pode conectar o pgAdmin."))
+                self.after(0, self.app.refresh_status)
+            except Exception as e:
+                self.after(0, lambda: messagebox.showerror("Erro ao preparar banco", str(e)))
+
+        threading.Thread(target=work, daemon=True).start()
 
     def _save(self):
         self._read_to_config()
@@ -375,7 +473,7 @@ class SettingsTab(ttk.Frame):
             messagebox.showerror("Erro", "psycopg2 nao instalado.\nRode: py -m pip install psycopg2-binary")
             return
         try:
-            dsn = build_dsn(self.app.config["db"])
+            dsn = build_dsn(self.app.effective_db_dict())
             conn = psycopg2.connect(dsn, connect_timeout=5)
             cur = conn.cursor()
             cur.execute("SELECT version()")
@@ -523,12 +621,20 @@ class ImportTab(ttk.Frame):
 
         # Valida config minima
         cfg = self.app.config
-        if not cfg["db"].get("password"):
-            messagebox.showwarning(
-                "Configuracao incompleta",
-                "Configure a senha do banco na aba Configuracoes antes de executar."
-            )
-            return
+        if cfg["db"].get("mode", "external") == "embedded":
+            if not cfg["db"].get("embedded", {}).get("app_password"):
+                messagebox.showwarning(
+                    "Configuracao incompleta",
+                    "Defina a senha do banco embutido na aba Configuracoes antes de executar."
+                )
+                return
+        else:
+            if not cfg["db"].get("password"):
+                messagebox.showwarning(
+                    "Configuracao incompleta",
+                    "Configure a senha do banco na aba Configuracoes antes de executar."
+                )
+                return
 
         if "history" in selected and not cfg["paths"].get("extended_history_dir"):
             messagebox.showwarning(
@@ -572,11 +678,16 @@ class ImportTab(ttk.Frame):
 
     def _pipeline_thread(self, cfg: dict, steps: list):
         try:
+            log_cb = lambda msg: self._queue.put(("log", msg, self._tag_for(msg)))
+            # Garante o banco pronto (sobe o embutido se preciso) e usa a DSN certa.
+            db_dict = self.app.ensure_db_ready(log=log_cb)
+            run_cfg = dict(cfg)
+            run_cfg["db"] = db_dict
             from etl import pipeline
             pipeline.run(
-                config=cfg,
+                config=run_cfg,
                 steps=steps,
-                log=lambda msg: self._queue.put(("log", msg, self._tag_for(msg))),
+                log=log_cb,
                 on_step_start=lambda step, idx, total: self._queue.put(
                     ("step", step, idx, total)
                 ),
@@ -752,7 +863,7 @@ class StatusTab(ttk.Frame):
         if psycopg2 is None:
             return
         try:
-            dsn = build_dsn(self.app.config["db"])
+            dsn = build_dsn(self.app.effective_db_dict())
             conn = psycopg2.connect(dsn, connect_timeout=3)
             cur = conn.cursor()
 
@@ -817,6 +928,10 @@ class App(tk.Tk):
         # Atalho para app.config (alias limpo)
         self.config = self.config_data
 
+        # Estado do banco embutido (Fase 1)
+        self.db_handle = None
+        self._prepare_lock = threading.Lock()
+
         # Tema
         apply_theme(self)
 
@@ -828,13 +943,87 @@ class App(tk.Tk):
 
         self._build_ui()
 
+        # Opcao A: sobe o banco embutido ao abrir; encerra ao fechar.
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self._startup_prepare()
+
+    # ------------------------------------------------------------------
+    # Banco: modo efetivo, preparacao e ciclo de vida do embutido
+    # ------------------------------------------------------------------
+
+    def _db_password_missing(self) -> bool:
+        db = self.config["db"]
+        if db.get("mode") == "embedded":
+            return not db.get("embedded", {}).get("app_password")
+        return not db.get("password")
+
+    def effective_db_dict(self) -> dict:
+        """Parametros de conexao em uso agora (sem preparar nada)."""
+        db = self.config["db"]
+        if db.get("mode") == "embedded":
+            if self.db_handle is not None:
+                return self.db_handle.as_db_dict()
+            emb = db.get("embedded", {})
+            return {
+                "host":     "127.0.0.1",
+                "port":     str(emb.get("port", "5433")),
+                "dbname":   emb.get("dbname", "spotify"),
+                "user":     emb.get("app_user", "spotify_app"),
+                "password": emb.get("app_password", ""),
+            }
+        return {k: db.get(k, "") for k in ("host", "port", "dbname", "user", "password")}
+
+    def ensure_db_ready(self, log=print) -> dict:
+        """Prepara o banco (sobe o embutido se preciso) e devolve o db dict efetivo."""
+        db = self.config["db"]
+        if db.get("mode") != "embedded":
+            return {k: db.get(k, "") for k in ("host", "port", "dbname", "user", "password")}
+        from etl import db_bootstrap
+        with self._prepare_lock:
+            handle = db_bootstrap.prepare(self.config, log=log, save_fn=save_config,
+                                          project_root=PROJECT_ROOT)
+            self.db_handle = handle
+            return handle.as_db_dict()
+
+    def _startup_prepare(self):
+        db = self.config["db"]
+        if db.get("mode") != "embedded":
+            return
+        if not db.get("embedded", {}).get("app_password"):
+            return  # usuario ainda vai definir a senha na aba Configuracoes
+
+        def work():
+            try:
+                self.ensure_db_ready(log=print)
+                self.after(0, self.refresh_status)
+            except Exception as e:
+                self.after(0, lambda: messagebox.showerror(
+                    "Banco embutido", f"Falha ao preparar o banco:\n{e}"))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def refresh_status(self):
+        try:
+            self.status_tab.refresh()
+        except Exception:
+            pass
+
+    def _on_close(self):
+        try:
+            if self.db_handle is not None:
+                self.db_handle.stop()
+        except Exception:
+            pass
+        self.destroy()
+
     def _build_ui(self):
         # Barra de titulo customizada (linha de status)
         status_bar = ttk.Frame(self, height=28)
         status_bar.pack(side="bottom", fill="x")
+        _db = self.effective_db_dict()
         ttk.Label(
             status_bar,
-            text=f"  Banco: {self.config['db']['dbname']} @ {self.config['db']['host']}:{self.config['db']['port']}",
+            text=f"  Banco: {_db['dbname']} @ {_db['host']}:{_db['port']}",
             style="Muted.TLabel",
         ).pack(side="left", pady=4)
 
@@ -851,8 +1040,8 @@ class App(tk.Tk):
         self.status_tab = StatusTab(nb, self)
         nb.add(self.status_tab, text="  ◉  Status  ")
 
-        # Abre configuracoes se senha vazia
-        if not self.config["db"].get("password"):
+        # Abre configuracoes se falta a senha do banco em uso
+        if self._db_password_missing():
             nb.select(0)
         else:
             nb.select(1)
