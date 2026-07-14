@@ -1,32 +1,36 @@
 @echo off
 title Spotify Import Manager — Instalacao
+cd /d "%~dp0"
 echo.
 echo ============================================================
 echo   Spotify Import Manager — Instalacao de Dependencias
 echo ============================================================
 echo.
 
-:: Verifica se Python esta instalado
-python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ERRO] Python nao encontrado!
+:: Detecta um Python compativel (3.10 a 3.13; a 3.14 ainda nao e suportada
+:: por algumas libs como librosa/numba)
+call "%~dp0find_python.bat" install
+
+if not defined PYCMD (
+    echo [ERRO] Nenhum Python compativel encontrado.
     echo.
-    echo Instale Python 3.10, 3.11 ou 3.12 em: https://python.org/downloads
-    echo.
+    echo Instale o Python 3.10, 3.11, 3.12 ou 3.13 em: https://python.org/downloads
     echo IMPORTANTE: marque "Add Python to PATH" durante a instalacao.
+    echo Obs: a versao mais nova (3.14) ainda nao e suportada por algumas bibliotecas.
+    echo.
     pause
     exit /b 1
 )
 
-echo Python encontrado:
-python --version
+echo Usando o Python:
+%PYCMD% --version
 echo.
 
 :: Instala dependencias
 echo Instalando dependencias (pode levar alguns minutos)...
 echo.
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+%PYCMD% -m pip install --upgrade pip
+%PYCMD% -m pip install -r requirements.txt
 
 if %errorlevel% neq 0 (
     echo.
