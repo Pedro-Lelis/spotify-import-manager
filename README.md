@@ -142,7 +142,6 @@ As ~60–75 tracks sem cobertura total são músicas removidas de todas as plata
 ## O que Está Planejado
 
 ### Curto prazo
-- [ ] **Exercícios SQL nível 6** — window functions, CTEs recursivas, análises avançadas sobre o histórico
 - [ ] **Dashboard de visualização** — objetivo original do projeto; visualizar padrões de escuta, artistas mais ouvidos por período, evolução de features ao longo do tempo
 
 ### Médio prazo
