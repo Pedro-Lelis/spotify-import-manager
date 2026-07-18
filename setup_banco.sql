@@ -288,7 +288,7 @@ SELECT li.artist_name_raw AS artista,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
        sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
-       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
+       sum(li.ms_played) / 3600000.0 AS horas_escuta
 FROM listen li
 GROUP BY 1
 ORDER BY plays_validos DESC;
@@ -300,7 +300,7 @@ SELECT li.track_name_raw AS faixa,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
        sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
-       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
+       sum(li.ms_played) / 3600000.0 AS horas_escuta
 FROM listen li
 GROUP BY 1, 2
 ORDER BY plays_validos DESC;
@@ -311,7 +311,7 @@ SELECT li.album_name_raw AS album,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
        sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
-       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
+       sum(li.ms_played) / 3600000.0 AS horas_escuta
 FROM listen li
 GROUP BY 1
 ORDER BY plays_validos DESC;
@@ -322,7 +322,7 @@ SELECT ge.name AS genero,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
        sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
-       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
+       sum(li.ms_played) / 3600000.0 AS horas_escuta
 FROM listen li
 JOIN track tr        ON tr.id = li.track_id
 JOIN track_artist ta ON ta.track_id = tr.id AND ta.position = 0
@@ -337,7 +337,7 @@ SELECT to_char(li.played_at AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM') AS ano_
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
        sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
-       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
+       sum(li.ms_played) / 3600000.0 AS horas_escuta
 FROM listen li
 GROUP BY 1
 ORDER BY 1;
@@ -348,7 +348,7 @@ SELECT extract(hour FROM li.played_at AT TIME ZONE 'America/Sao_Paulo')::int AS 
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
        sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
-       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
+       sum(li.ms_played) / 3600000.0 AS horas_escuta
 FROM listen li
 GROUP BY 1
 ORDER BY 1;
@@ -364,7 +364,7 @@ SELECT extract(isodow FROM li.played_at AT TIME ZONE 'America/Sao_Paulo')::int A
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
        sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
-       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
+       sum(li.ms_played) / 3600000.0 AS horas_escuta
 FROM listen li
 GROUP BY 1, 2
 ORDER BY 1;
