@@ -287,7 +287,8 @@ CREATE OR REPLACE VIEW vw_top_artistas AS
 SELECT li.artist_name_raw AS artista,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
-       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta
+       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
+       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
 FROM listen li
 GROUP BY 1
 ORDER BY plays_validos DESC;
@@ -298,7 +299,8 @@ SELECT li.track_name_raw AS faixa,
        li.artist_name_raw AS artista,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
-       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta
+       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
+       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
 FROM listen li
 GROUP BY 1, 2
 ORDER BY plays_validos DESC;
@@ -308,7 +310,8 @@ CREATE OR REPLACE VIEW vw_top_albuns AS
 SELECT li.album_name_raw AS album,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
-       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta
+       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
+       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
 FROM listen li
 GROUP BY 1
 ORDER BY plays_validos DESC;
@@ -318,7 +321,8 @@ CREATE OR REPLACE VIEW vw_top_generos AS
 SELECT ge.name AS genero,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
-       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta
+       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
+       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
 FROM listen li
 JOIN track tr        ON tr.id = li.track_id
 JOIN track_artist ta ON ta.track_id = tr.id AND ta.position = 0
@@ -332,7 +336,8 @@ CREATE OR REPLACE VIEW vw_escuta_mensal AS
 SELECT to_char(li.played_at AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM') AS ano_mes,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
-       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta
+       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
+       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
 FROM listen li
 GROUP BY 1
 ORDER BY 1;
@@ -342,7 +347,8 @@ CREATE OR REPLACE VIEW vw_escuta_por_hora AS
 SELECT extract(hour FROM li.played_at AT TIME ZONE 'America/Sao_Paulo')::int AS hora,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
-       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta
+       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
+       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
 FROM listen li
 GROUP BY 1
 ORDER BY 1;
@@ -357,7 +363,8 @@ SELECT extract(isodow FROM li.played_at AT TIME ZONE 'America/Sao_Paulo')::int A
        END AS nome_dia,
        count(*) AS plays_totais,
        count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos,
-       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta
+       sum(li.ms_played * interval '1 millisecond') AS tempo_escuta,
+       round(sum(li.ms_played) / 3600000.0, 1) AS horas_escuta
 FROM listen li
 GROUP BY 1, 2
 ORDER BY 1;
