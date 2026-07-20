@@ -6,7 +6,25 @@ Pipeline ETL + interface gráfica para construir um banco de dados pessoal com t
 
 ## Objetivo
 
-O Spotify oferece um arquivo de exportação com o histórico completo de escutas, mas os dados brutos são JSONs fragmentados e sem metadados ricos. Este projeto transforma esses JSONs num banco PostgreSQL estruturado, enriquecido com dados da API do Spotify e features de áudio calculadas via análise de sinal — pronto para consultas SQL analíticas e futura visualização em dashboard.
+O Spotify oferece um arquivo de exportação com o histórico completo de escutas, mas os dados brutos são JSONs fragmentados e sem metadados ricos. Este projeto transforma esses JSONs num banco PostgreSQL estruturado, enriquecido com dados da API do Spotify e features de áudio calculadas via análise de sinal — pronto para consultas SQL analíticas e visualização em dashboard.
+
+---
+
+## Dashboard
+
+Dashboard interativo em **Power BI Desktop** (tema escuro, verde Spotify), conectado ao banco PostgreSQL. Duas páginas alimentadas pelas 12 views `vw_*`.
+
+### Página 1 — Visão geral
+![Dashboard — Página 1](docs/dashboard-pagina1.png)
+
+KPIs (plays válidos, horas escutadas, artistas distintos, maior sequência), rankings de artistas / faixas / gêneros, linha do tempo mensal, ritmo por hora e por dia da semana, perfil de áudio ao longo do tempo e artistas mais pulados.
+
+### Página 2 — Detalhes e curiosidades
+![Dashboard — Página 2](docs/dashboard-pagina2.png)
+
+Top álbuns, maiores sequências de escuta (com barras de dados), dias sem escuta por mês e um **heatmap** de escuta por hora × dia da semana.
+
+> Tema versionado em [`spotify_dark_theme.json`](spotify_dark_theme.json). Os dados vêm das views definidas em [`setup_banco.sql`](setup_banco.sql).
 
 ---
 
