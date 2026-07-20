@@ -99,7 +99,7 @@ Todas as etapas são **idempotentes** — podem ser interrompidas e reexecutadas
 
 ## Views Analíticas
 
-O schema inclui **11 views** (prefixo `vw_`) que servem de camada semântica para consultas SQL e para o dashboard. Convenção comum: fuso `America/Sao_Paulo` e duas métricas — `plays_totais` (todas as reproduções) e `plays_validos` (com `ms_played >= 30s`), além de `tempo_escuta` (intervalo) e `horas_escuta` (numérico, para agregações).
+O schema inclui **12 views** (prefixo `vw_`) que servem de camada semântica para consultas SQL e para o dashboard. Convenção comum: fuso `America/Sao_Paulo` e duas métricas — `plays_totais` (todas as reproduções) e `plays_validos` (com `ms_played >= 30s`), além de `tempo_escuta` (intervalo) e `horas_escuta` (numérico, para agregações).
 
 | View | O que responde |
 |---|---|
@@ -114,8 +114,9 @@ O schema inclui **11 views** (prefixo `vw_`) que servem de camada semântica par
 | `vw_skip_por_artista` | Taxa de skip por artista (mín. 50 plays) |
 | `vw_sequencias_escuta` | Maiores sequências de dias consecutivos (gaps-and-islands) |
 | `vw_dias_sem_escuta` | Dias sem nenhuma reprodução |
+| `vw_escuta_hora_dia` | Escuta cruzando hora × dia da semana (heatmap) |
 
-As views exercitam window functions, CTEs, `FILTER`, `generate_series` e o padrão gaps-and-islands.
+As views exercitam window functions, CTEs, `FILTER`, `generate_series`, `AT TIME ZONE` e o padrão gaps-and-islands.
 
 ---
 
@@ -157,7 +158,7 @@ As views exercitam window functions, CTEs, `FILTER`, `generate_series` e o padr�
 | `preview_url` | 5.166 / 5.226 | 98.9% |
 | `audio_features` básicas | 5.211 / 5.226 | 99.7% |
 | `audio_features` extras | 5.199 / 5.226 | 99.5% |
-| Views analíticas | 11 | — |
+| Views analíticas | 12 | — |
 
 As ~60–75 tracks sem cobertura total são músicas removidas de todas as plataformas de streaming (sem áudio disponível em Spotify, Deezer ou iTunes).
 
@@ -168,7 +169,10 @@ O banco pode rodar localmente (embutido ou PostgreSQL instalado) ou num host rem
 ## O que Está Planejado
 
 ### Em andamento
-- [ ] **Dashboard de visualização (Power BI Desktop)** — objetivo original do projeto. Página única em tema escuro conectada ao banco no GCP (via túnel SSH + PGBouncer): KPIs, rankings (artistas/faixas/gêneros), linha do tempo mensal, ritmo por hora/dia da semana, perfil de áudio ao longo do tempo e curiosidades (skip, sequências). As 11 views `vw_*` são a fonte de dados.
+- [ ] **Dashboard de visualização (Power BI Desktop)** — objetivo original do projeto. **Duas páginas** em tema escuro (verde Spotify) conectadas ao banco no GCP (via túnel SSH + PGBouncer):
+  - *Página 1 (visão geral):* KPIs, rankings (artistas/faixas/gêneros), linha do tempo mensal, ritmo por hora/dia da semana, perfil de áudio ao longo do tempo, artistas mais pulados.
+  - *Página 2 (detalhes):* top álbuns, maiores sequências de escuta, dias sem escuta por mês, heatmap hora × dia da semana.
+  - Tema versionado em `spotify_dark_theme.json`. As 12 views `vw_*` são a fonte de dados. Falta o acabamento final e a publicação.
 
 ### Médio prazo
 - [ ] **Essentia + TensorFlow** — substituir as aproximações espectrais por modelos ML pré-treinados do Music Technology Group (Barcelona), especialmente para `valence` e `liveness` que são os mais difíceis de estimar sem ML

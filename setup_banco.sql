@@ -422,8 +422,24 @@ calendario AS (
              interval '1 day'
            )::date AS dia
 )
-SELECT c.dia
+SELECT c.dia,
+       to_char(c.dia, 'YYYY-MM') AS ano_mes
 FROM calendario c
 LEFT JOIN dias_ouvidos d ON d.dia = c.dia
 WHERE d.dia IS NULL
 ORDER BY c.dia;
+
+-- Escuta por hora x dia da semana (para heatmap)
+CREATE OR REPLACE VIEW vw_escuta_hora_dia AS
+SELECT extract(isodow FROM li.played_at AT TIME ZONE 'America/Sao_Paulo')::int AS dia_semana,
+       CASE extract(isodow FROM li.played_at AT TIME ZONE 'America/Sao_Paulo')::int
+            WHEN 1 THEN 'Segunda' WHEN 2 THEN 'Terca'  WHEN 3 THEN 'Quarta'
+            WHEN 4 THEN 'Quinta'  WHEN 5 THEN 'Sexta'   WHEN 6 THEN 'Sabado'
+            WHEN 7 THEN 'Domingo'
+       END AS nome_dia,
+       extract(hour FROM li.played_at AT TIME ZONE 'America/Sao_Paulo')::int AS hora,
+       count(*) AS plays_totais,
+       count(*) FILTER (WHERE li.ms_played >= 30000) AS plays_validos
+FROM listen li
+GROUP BY 1, 2, 3
+ORDER BY 1, 3;
