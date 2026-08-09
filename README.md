@@ -12,19 +12,21 @@ O Spotify oferece um arquivo de exportação com o histórico completo de escuta
 
 ## Dashboard
 
-Dashboard interativo em **Power BI Desktop** (tema escuro, verde Spotify), conectado ao banco PostgreSQL. Duas páginas alimentadas pelas 12 views `vw_*`.
+Dashboard em **Power BI Desktop** (tema escuro, verde Spotify), conectado ao banco PostgreSQL.
 
-### Página 1 — Visão geral
+### Página 1 — Visão geral (interativa)
 ![Dashboard — Página 1](docs/dashboard-pagina1.png)
 
 KPIs (plays válidos, horas escutadas, artistas distintos, maior sequência), rankings de artistas / faixas / gêneros, linha do tempo mensal, ritmo por hora e por dia da semana, perfil de áudio ao longo do tempo e artistas mais pulados.
 
+Esta página roda sobre o **modelo estrela**: selecionar um artista no filtro do topo (ou clicar em qualquer barra) propaga o filtro para todos os visuais, que recalculam via medidas DAX.
+
 ### Página 2 — Detalhes e curiosidades
 ![Dashboard — Página 2](docs/dashboard-pagina2.png)
 
-Top álbuns, maiores sequências de escuta (com barras de dados), dias sem escuta por mês e um **heatmap** de escuta por hora × dia da semana.
+Top álbuns, maiores sequências de escuta (com barras de dados), dias sem escuta por mês e um **heatmap** de escuta por hora × dia da semana. São estatísticas do panorama completo, por isso a página é estática.
 
-> Tema versionado em [`spotify_dark_theme.json`](spotify_dark_theme.json). Os dados vêm das views definidas em [`setup_banco.sql`](setup_banco.sql).
+> Tema versionado em [`spotify_dark_theme.json`](spotify_dark_theme.json). Os dados vêm de [`setup_banco.sql`](setup_banco.sql) (views analíticas) e [`views_estrela.sql`](views_estrela.sql) (modelo dimensional).
 
 ---
 
