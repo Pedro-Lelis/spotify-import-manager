@@ -138,6 +138,23 @@ As views exercitam window functions, CTEs, `FILTER`, `generate_series`, `AT TIME
 
 ---
 
+## Modelo Dimensional (Star Schema)
+
+Para habilitar **interatividade total** no dashboard — clicar em qualquer artista, período ou gênero filtra o painel inteiro — o projeto inclui um **modelo estrela** em [`views_estrela.sql`](views_estrela.sql):
+
+| Objeto | Papel | Grão |
+|---|---|---|
+| `fato_escuta` | Tabela **fato** | 1 linha por reprodução |
+| `dim_tempo` | Dimensão | 1 linha por dia (ano, mês, dia da semana) |
+| `dim_artista` | Dimensão | 1 linha por artista |
+| `dim_genero` | Dimensão | 1 linha por gênero principal |
+
+O fato guarda as medidas (`ms_played`) e as chaves para as dimensões, além de `genero` e features de áudio. No Power BI, as dimensões se relacionam ao fato (1→N) e as métricas viram **medidas DAX**, calculadas em tempo real conforme os filtros.
+
+É a diferença prática entre **views agregadas** (rápidas, mas isoladas — cada visual é uma ilha) e um **modelo dimensional** (todos os visuais compartilham o fato via relacionamentos, então um filtro propaga por todo o dashboard).
+
+---
+
 ## Features de Áudio
 
 ### Calculadas via Librosa (análise de sinal)
@@ -250,7 +267,9 @@ Spotify Import Manager\
   ├── desinstalar.bat               ← Remove dependências Python
   ├── find_python.bat               ← Detecta a versão do Python adequada
   ├── requirements.txt              ← Lista de dependências
-  ├── setup_banco.sql               ← Schema completo do banco
+  ├── setup_banco.sql               ← Schema completo do banco + 12 views analiticas
+  ├── views_estrela.sql             ← Modelo estrela (fato + dimensoes) para o dashboard
+  ├── spotify_dark_theme.json       ← Tema do dashboard (Power BI)
   ├── config.json.example           ← Template de configuração
   └── etl\
       ├── __init__.py               ← Torna etl/ um pacote Python
