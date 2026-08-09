@@ -4,6 +4,8 @@
   "foreground": "#E8E8E8",
   "foregroundNeutralSecondary": "#B3B3B3",
   "foregroundNeutralTertiary": "#7A7A7A",
+  "backgroundLight": "#181818",
+  "backgroundNeutral": "#282828",
   "tableAccent": "#1DB954",
   "dataColors": [
     "#1DB954",
@@ -125,6 +127,29 @@
         "border": [ { "show": true, "color": { "solid": { "color": "#2A2A2A" } }, "radius": 8 } ]
       }
     },
+    "slicer": {
+      "*": {
+        "background": [ { "show": true, "color": { "solid": { "color": "#181818" } }, "transparency": 0 } ],
+        "border": [ { "show": true, "color": { "solid": { "color": "#2A2A2A" } }, "radius": 8 } ],
+        "items": [
+          {
+            "fontColor": { "solid": { "color": "#E8E8E8" } },
+            "background": { "solid": { "color": "#181818" } },
+            "outline": "None",
+            "fontSize": 10
+          }
+        ],
+        "header": [
+          {
+            "show": true,
+            "fontColor": { "solid": { "color": "#B3B3B3" } },
+            "background": { "solid": { "color": "#181818" } },
+            "outline": "None",
+            "fontSize": 10
+          }
+        ]
+      }
+    },
     "page": {
       "*": {
         "background": [
@@ -132,6 +157,44 @@
         ],
         "outspace": [
           { "color": { "solid": { "color": "#0D0D0D" } }, "transparency": 0 }
+        ],
+        "outspacePane": [
+          {
+            "backgroundColor": { "solid": { "color": "#121212" } },
+            "foregroundColor": { "solid": { "color": "#FFFFFF" } },
+            "transparency": 0,
+            "border": true,
+            "borderColor": { "solid": { "color": "#2A2A2A" } },
+            "titleSize": 14,
+            "headerSize": 11,
+            "fontFamily": "Segoe UI",
+            "checkboxAndApplyColor": { "solid": { "color": "#1DB954" } },
+            "inputBoxColor": { "solid": { "color": "#242424" } }
+          }
+        ],
+        "filterCard": [
+          {
+            "$id": "Available",
+            "backgroundColor": { "solid": { "color": "#181818" } },
+            "foregroundColor": { "solid": { "color": "#E8E8E8" } },
+            "transparency": 0,
+            "border": true,
+            "borderColor": { "solid": { "color": "#2A2A2A" } },
+            "textSize": 10,
+            "fontFamily": "Segoe UI",
+            "inputBoxColor": { "solid": { "color": "#242424" } }
+          },
+          {
+            "$id": "Applied",
+            "backgroundColor": { "solid": { "color": "#282828" } },
+            "foregroundColor": { "solid": { "color": "#FFFFFF" } },
+            "transparency": 0,
+            "border": true,
+            "borderColor": { "solid": { "color": "#1DB954" } },
+            "textSize": 10,
+            "fontFamily": "Segoe UI",
+            "inputBoxColor": { "solid": { "color": "#242424" } }
+          }
         ]
       }
     }
